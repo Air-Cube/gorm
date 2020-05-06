@@ -34,6 +34,8 @@ type DB struct {
 
 	// function to be used to override the creating of a new timestamp
 	nowFuncOverride func() time.Time
+
+	ctx context.Context
 }
 
 type logModeValue int
@@ -107,6 +109,12 @@ func (s *DB) New() *DB {
 	clone.search = nil
 	clone.Value = nil
 	return clone
+}
+
+// WithContext set given context. You can cancel slowly query by setting timeout to context.
+func (s *DB) WithContext(ctx context.Context) *DB {
+	s.ctx = ctx
+	return s
 }
 
 type closer interface {
@@ -204,6 +212,7 @@ func (s *DB) NewScope(value interface{}) *Scope {
 	dbClone := s.clone()
 	dbClone.Value = value
 	scope := &Scope{db: dbClone, Value: value}
+	scope.ctx = dbClone.ctx
 	if s.search != nil {
 		scope.Search = s.search.clone()
 	} else {
@@ -847,6 +856,7 @@ func (s *DB) clone() *DB {
 		blockGlobalUpdate: s.blockGlobalUpdate,
 		dialect:           newDialect(s.dialect.GetName(), s.db),
 		nowFuncOverride:   s.nowFuncOverride,
+		ctx:               s.ctx,
 	}
 
 	s.values.Range(func(k, v interface{}) bool {

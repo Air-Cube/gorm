@@ -2,6 +2,7 @@ package gorm
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"errors"
@@ -24,6 +25,7 @@ type Scope struct {
 	skipLeft        bool
 	fields          *[]*Field
 	selectAttrs     *[]string
+	ctx             context.Context
 }
 
 // IndirectValue return scope's reflect value's indirect value
@@ -361,7 +363,7 @@ func (scope *Scope) Exec() *Scope {
 	defer scope.trace(NowFunc())
 
 	if !scope.HasError() {
-		if result, err := scope.SQLDB().Exec(scope.SQL, scope.SQLVars...); scope.Err(err) == nil {
+		if result, err := exec(scope); scope.Err(err) == nil {
 			if count, err := result.RowsAffected(); scope.Err(err) == nil {
 				scope.db.RowsAffected = count
 			}
@@ -1418,4 +1420,28 @@ func (scope *Scope) hasConditions() bool {
 		len(scope.Search.whereConditions) > 0 ||
 		len(scope.Search.orConditions) > 0 ||
 		len(scope.Search.notConditions) > 0
+}
+
+// exec is proxy method for SQLCommon.Exec and SQLCommon.ExecContext
+func exec(scope *Scope) (sql.Result, error) {
+	if scope.ctx == nil {
+		return scope.SQLDB().Exec(scope.SQL, scope.SQLVars...)
+	}
+	return scope.SQLDB().ExecContext(scope.ctx, scope.SQL, scope.SQLVars...)
+}
+
+// query is proxy method for SQLCommon.Query and SQLCommon.QueryContext
+func query(scope *Scope) (*sql.Rows, error) {
+	if scope.ctx == nil {
+		return scope.SQLDB().Query(scope.SQL, scope.SQLVars...)
+	}
+	return scope.SQLDB().QueryContext(scope.ctx, scope.SQL, scope.SQLVars...)
+}
+
+// queryRow is proxy method for SQLCommon.QueryRow and SQLCommon.QueryRowContext
+func queryRow(scope *Scope) *sql.Row {
+	if scope.ctx == nil {
+		return scope.SQLDB().QueryRow(scope.SQL, scope.SQLVars...)
+	}
+	return scope.SQLDB().QueryRowContext(scope.ctx, scope.SQL, scope.SQLVars...)
 }

@@ -33,9 +33,9 @@ func rowQueryCallback(scope *Scope) {
 		}
 
 		if rowResult, ok := result.(*RowQueryResult); ok {
-			rowResult.Row = scope.SQLDB().QueryRow(scope.SQL, scope.SQLVars...)
+			rowResult.Row = queryRow(scope)
 		} else if rowsResult, ok := result.(*RowsQueryResult); ok {
-			rowsResult.Rows, rowsResult.Error = scope.SQLDB().Query(scope.SQL, scope.SQLVars...)
+			rowsResult.Rows, rowsResult.Error = query(scope)
 		}
 	}
 }
